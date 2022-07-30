@@ -24,8 +24,9 @@ pub enum WriteResult {
     WrongExpectedVersion,
 }
 
+pub type Stream = Vec<StreamMessage>;
 pub trait ReadStream {
-    fn read_stream(&self, stream_name: &str, max: Option<usize>) -> (StreamVersion, &[StreamMessage]);
+    fn read_stream(&self, stream_name: &str, max: Option<usize>) -> (StreamVersion, Stream);
 }
 
 pub trait WriteToStream {

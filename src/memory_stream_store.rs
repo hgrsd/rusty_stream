@@ -44,7 +44,7 @@ impl ReadStream for MemoryStreamStore {
                 let take = std::cmp::min(n, s.len());
                 let mut vec = Vec::new();
                 for idx in 0..take {
-                   vec.push(s[idx].clone());
+                    vec.push(s[idx].clone());
                 }
                 (version, vec)
             }
@@ -54,40 +54,42 @@ impl ReadStream for MemoryStreamStore {
 
 impl WriteToStream for MemoryStreamStore {
     fn write_to_stream(&mut self, stream_name: &str, expected_version: StreamVersion, message: Message) -> WriteResult {
-        let mut stream = self.streams.write().unwrap();
-        let version = self.get_stream_version(stream.get(stream_name));
-        if version != expected_version {
-            WriteResult::WrongExpectedVersion
-        } else {
-            let new_version = match version {
-                NoStream => 0,
-                Revision(x) => x + 1,
-            };
-            let m = StreamMessage {
-                id: Uuid::new_v4().to_string(),
-                message_type: message.message_type.clone(),
-                data: message.data,
-                revision: new_version,
-            };
+        let mut locked_streams = self.streams.write().unwrap();
 
-            match stream.get_mut(stream_name) {
-                None => {
-                    stream.insert(stream_name.to_owned(), vec![m]);
-                }
-                Some(messages) => {
-                    messages.push(m);
-                }
-            };
-            WriteResult::Ok(Revision(new_version))
+        let version = self.get_stream_version(locked_streams.get(stream_name));
+        if version != expected_version {
+            return WriteResult::WrongExpectedVersion;
         }
+
+        let new_version = match version {
+            NoStream => 0,
+            Revision(x) => x + 1,
+        };
+        let m = StreamMessage {
+            id: Uuid::new_v4().to_string(),
+            message_type: message.message_type.clone(),
+            data: message.data,
+            revision: new_version,
+        };
+
+        match locked_streams.get_mut(stream_name) {
+            None => {
+                locked_streams.insert(stream_name.to_owned(), vec![m]);
+            }
+            Some(messages) => {
+                messages.push(m);
+            }
+        };
+
+        WriteResult::Ok(Revision(new_version))
     }
+}
 }
 
 #[cfg(test)]
 mod test {
     use crate::memory_stream_store::MemoryStreamStore;
     use crate::stream::{Message, ReadStream, StreamVersion, WriteResult, WriteToStream};
-    use crate::stream::WriteResult::WrongExpectedVersion;
 
     #[test]
     fn it_can_write_and_read() {
@@ -97,13 +99,39 @@ mod test {
             data: data.clone(),
         };
         let mut store = MemoryStreamStore::new();
+
         let append_result = store.write_to_stream("test stream", StreamVersion::NoStream, msg);
         assert_eq!(append_result, WriteResult::Ok(StreamVersion::Revision(0)));
+
         let (version, messages) = store.read_stream("test stream", None);
         assert_eq!(version, StreamVersion::Revision(0));
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].data, data);
         assert_eq!(messages[0].message_type, "TestMessage");
+    }
+
+    #[test]
+    fn it_can_write_multiple_events() {
+        let data = r#"{"test": "data"}"#.as_bytes().to_vec();
+        let msg = Message {
+            message_type: "TestMessage".to_owned(),
+            data: data.clone(),
+        };
+        let mut store = MemoryStreamStore::new();
+        let _ = store.write_to_stream("test stream", StreamVersion::NoStream, msg);
+        let data = r#"{"test2": "data2"}"#.as_bytes().to_vec();
+        let msg = Message {
+            message_type: "AnotherMessage".to_owned(),
+            data: data.clone(),
+        };
+        let _ = store.write_to_stream("test stream", StreamVersion::Revision(0), msg);
+
+        let (version, messages) = store.read_stream("test stream", None);
+
+        assert_eq!(version, StreamVersion::Revision(1));
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[0].message_type, "TestMessage");
+        assert_eq!(messages[1].message_type, "AnotherMessage");
     }
 
     #[test]
@@ -115,8 +143,10 @@ mod test {
         };
         let mut store = MemoryStreamStore::new();
         store.write_to_stream("test stream", StreamVersion::NoStream, msg.clone());
+
         let append_result = store.write_to_stream("test stream", StreamVersion::NoStream, msg);
-        assert_eq!(append_result, WrongExpectedVersion);
+        assert_eq!(append_result, WriteResult::WrongExpectedVersion);
+
         let (version, messages) = store.read_stream("test stream", None);
         assert_eq!(messages.len(), 1);
         assert_eq!(version, StreamVersion::Revision(0));

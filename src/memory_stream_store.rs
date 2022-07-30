@@ -67,7 +67,7 @@ impl WriteToStream for MemoryStreamStore {
         };
         let m = StreamMessage {
             id: Uuid::new_v4().to_string(),
-            message_type: message.message_type.clone(),
+            message_type: message.message_type,
             data: message.data,
             revision: new_version,
         };

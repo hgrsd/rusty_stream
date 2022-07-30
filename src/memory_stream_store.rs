@@ -84,7 +84,6 @@ impl WriteToStream for MemoryStreamStore {
         WriteResult::Ok(Revision(new_version))
     }
 }
-}
 
 #[cfg(test)]
 mod test {

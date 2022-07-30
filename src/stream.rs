@@ -24,11 +24,27 @@ pub enum WriteResult {
     WrongExpectedVersion,
 }
 
+#[derive(Eq, PartialEq)]
+pub enum ReadDirection {
+    Forwards,
+    Backwards,
+}
+
 pub type Stream = Vec<StreamMessage>;
-pub trait ReadStream {
-    fn read_stream(&self, stream_name: &str, max: Option<usize>) -> (StreamVersion, Stream);
+
+pub trait ReadFromStream {
+    fn read_from_stream(
+        &self,
+        stream_name: &str,
+        read_direction: ReadDirection,
+    ) -> (StreamVersion, Stream);
 }
 
 pub trait WriteToStream {
-    fn write_to_stream(&mut self, stream_name: &str, expected_version: StreamVersion, message: Message) -> WriteResult;
+    fn write_to_stream(
+        &mut self,
+        stream_name: &str,
+        expected_version: StreamVersion,
+        message: Message,
+    ) -> WriteResult;
 }

@@ -1,10 +1,15 @@
 [package]
-name = "stream"
-version = "0.1.0"
+name = "stroming"
+version = "0.0.1"
 edition = "2021"
+description = "Traits for a stream store, with an in-memory implementation."
+license = "MIT"
+keywords = ["events", "eventsourcing", "streaming", "persistence", "eventstore"]
+exclude = [".github/", ".gitignore"]
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies.uuid]
 version = "1.1.2"
-features = ["v4", "fast-rng"]
+features = ["v4"]

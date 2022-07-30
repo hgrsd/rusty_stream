@@ -4,7 +4,7 @@ use std::sync::{RwLock, RwLockWriteGuard};
 use uuid::Uuid;
 
 use crate::memory_stream_store::index::LogPositionIndex;
-use crate::stream::{
+use crate::store::{
     Message, MessagePosition, ReadDirection, ReadFromCategory, ReadFromStream, Stream,
     StreamMessage, StreamVersion, WriteResult, WriteToStream,
 };
@@ -149,7 +149,7 @@ impl WriteToStream for MemoryStreamStore {
 #[cfg(test)]
 mod test {
     use super::MemoryStreamStore;
-    use crate::stream::{
+    use crate::store::{
         Message, ReadDirection, ReadFromCategory, ReadFromStream, StreamVersion, WriteResult,
         WriteToStream,
     };

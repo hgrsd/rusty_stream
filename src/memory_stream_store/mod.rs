@@ -41,7 +41,7 @@ impl ReadFromStream for MemoryStreamStore {
         let messages = match pointers {
             None => Vec::new(),
             Some(s) => {
-                let mut v = Vec::with_capacity(s.len());
+                let mut v = Vec::with_capacity(s.len() - start);
                 for pointer in s {
                     let message = log.get(*pointer).unwrap();
                     version = StreamVersion::Revision(message.position.revision);
@@ -82,7 +82,7 @@ impl ReadFromCategory for MemoryStreamStore {
                         Err(x) => x,
                     }
                 };
-                let mut v = Vec::with_capacity(s.len());
+                let mut v = Vec::with_capacity(s.len() - 1);
                 for pointer in s[start..].iter().take(max_messages.unwrap_or(s.len())) {
                     v.push(log.get(*pointer).unwrap().clone());
                 }

@@ -95,7 +95,7 @@ impl WriteToStream for MemoryStreamStore {
 
 #[cfg(test)]
 mod test {
-    use crate::r#mod::MemoryStreamStore;
+    use super::MemoryStreamStore;
     use crate::stream::{
         Message, ReadDirection, ReadFromStream, StreamVersion, WriteResult, WriteToStream,
     };

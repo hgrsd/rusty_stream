@@ -24,7 +24,7 @@ impl LogPositionIndex {
 
     pub fn get_positions(&self, key: &str) -> &[usize] {
         match self.idx.get(key) {
-            Some(positions) => &positions,
+            Some(positions) => positions,
             None => &[],
         }
     }

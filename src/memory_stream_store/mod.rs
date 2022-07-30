@@ -1,2 +1,2 @@
-pub mod store;
 mod index;
+pub mod store;

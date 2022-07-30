@@ -41,12 +41,18 @@ impl MemoryStreamStore {
 
         let category = stream_name
             .split('-')
-            .nth(0)
+            .next()
             .expect("No category can be inferred from stream");
         category_index.write_position(category, pos.position);
 
         stream_metadata.insert(stream_name.to_owned(), pos.revision);
         WriteResult::Ok(pos)
+    }
+}
+
+impl Default for MemoryStreamStore {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -93,6 +99,7 @@ impl ReadFromCategory for MemoryStreamStore {
         for position in log_positions.iter().take(n) {
             messages.push(log.get(*position).unwrap().clone());
         }
+
         messages
     }
 }
@@ -111,7 +118,7 @@ impl WriteToStream for MemoryStreamStore {
 
         let version = stream_metadata
             .get(stream_name)
-            .map(|revision| StreamVersion::Revision(revision.clone()))
+            .map(|revision| StreamVersion::Revision(*revision))
             .unwrap_or(StreamVersion::NoStream);
 
         if version != expected_version {
@@ -132,7 +139,7 @@ impl WriteToStream for MemoryStreamStore {
             id: Uuid::new_v4().to_string(),
             message_type: message.message_type,
             data: message.data,
-            position: new_position.clone(),
+            position: new_position,
         };
 
         MemoryStreamStore::do_write(log, streams, categories, stream_metadata, stream_name, m)
@@ -296,7 +303,7 @@ mod test {
     }
 
     #[test]
-    fn it_handles_wrong_version() {
+    fn it_handles_conflict() {
         let data = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg = Message {
             message_type: "TestMessage".to_owned(),

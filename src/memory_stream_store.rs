@@ -13,7 +13,7 @@ struct MemoryStreamStore {
 }
 
 impl MemoryStreamStore {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             streams: RwLock::new(HashMap::new()),
         }
@@ -30,14 +30,14 @@ impl MemoryStreamStore {
 }
 
 impl ReadStream for MemoryStreamStore {
-    fn read_stream(&self, stream_name: &str, max: Option<usize>) -> (StreamVersion, Stream) {
+    fn read_stream(&self, stream_name: &str, max_count: Option<usize>) -> (StreamVersion, Stream) {
         let lock = self.streams.read().unwrap();
         let stream = lock.get(stream_name);
         let version = self.get_stream_version(stream);
         if let NoStream = version {
             return (NoStream, Vec::new());
         }
-        match (stream, max) {
+        match (stream, max_count) {
             (None, _) => (version, Vec::new()),
             (Some(s), None) => (version, s.clone()),
             (Some(s), Some(n)) => {

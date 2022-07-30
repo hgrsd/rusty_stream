@@ -4,23 +4,29 @@ pub struct Message {
     pub data: Vec<u8>,
 }
 
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct MessagePosition {
+    pub position: usize,
+    pub revision: usize,
+}
+
 #[derive(Clone)]
 pub struct StreamMessage {
     pub id: String,
     pub message_type: String,
     pub data: Vec<u8>,
-    pub revision: u64,
+    pub position: MessagePosition,
 }
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum StreamVersion {
     NoStream,
-    Revision(u64),
+    Revision(usize),
 }
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum WriteResult {
-    Ok(StreamVersion),
+    Ok(MessagePosition),
     WrongExpectedVersion,
 }
 
@@ -47,4 +53,13 @@ pub trait WriteToStream {
         expected_version: StreamVersion,
         message: Message,
     ) -> WriteResult;
+}
+
+pub trait ReadFromCategory {
+    fn read_from_category(
+        &mut self,
+        category_name: &str,
+        offset: usize,
+        max_messages: Option<usize>,
+    ) -> Stream;
 }

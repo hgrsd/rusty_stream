@@ -4,6 +4,13 @@ A set of traits for reading from and writing to a stream store, together with an
 
 [View docs](docs.rs/stroming)
 
+# Use
+
+```toml
+[dependencies]
+stroming = "0.0.4"
+```
+
 # License
 
 MIT

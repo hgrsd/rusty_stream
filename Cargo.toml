@@ -1,6 +1,6 @@
 [package]
 name = "stroming"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 description = "Traits for a stream store, with an in-memory implementation."
 license = "MIT"

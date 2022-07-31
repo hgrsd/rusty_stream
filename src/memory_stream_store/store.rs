@@ -189,12 +189,12 @@ mod test {
         let data_1 = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg_1 = Message {
             message_type: "TestMessage".to_owned(),
-            data: data_1.clone(),
+            data: data_1,
         };
         let data_2 = r#"{"test2": "data2"}"#.as_bytes().to_vec();
         let msg_2 = Message {
             message_type: "AnotherMessage".to_owned(),
-            data: data_2.clone(),
+            data: data_2,
         };
 
         let _ = store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg_1, msg_2]);
@@ -214,12 +214,12 @@ mod test {
         let data_1 = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg_1 = Message {
             message_type: "TestMessage".to_owned(),
-            data: data_1.clone(),
+            data: data_1,
         };
         let data_2 = r#"{"test2": "data2"}"#.as_bytes().to_vec();
         let msg_2 = Message {
             message_type: "AnotherMessage".to_owned(),
-            data: data_2.clone(),
+            data: data_2,
         };
 
         store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg_1, msg_2]);
@@ -251,7 +251,7 @@ mod test {
         let data = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg = Message {
             message_type: "TestMessage".to_owned(),
-            data: data.clone(),
+            data,
         };
         store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg]);
 
@@ -264,7 +264,7 @@ mod test {
 
         let msg = Message {
             message_type: "A third message".to_owned(),
-            data: data.clone(),
+            data,
         };
         store.write_to_stream("TestStream-1", StreamVersion::Revision(0), &[msg]);
 
@@ -281,7 +281,7 @@ mod test {
         let data = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg = Message {
             message_type: "TestMessage".to_owned(),
-            data: data.clone(),
+            data,
         };
         store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg]);
 
@@ -298,7 +298,7 @@ mod test {
 
         let msg = Message {
             message_type: "A third message".to_owned(),
-            data: data.clone(),
+            data,
         };
         store.write_to_stream("TestStream-1", StreamVersion::Revision(0), &[msg]);
 
@@ -314,12 +314,12 @@ mod test {
         let data_1 = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg_1 = Message {
             message_type: "TestMessage".to_owned(),
-            data: data_1.clone(),
+            data: data_1,
         };
         let data_2 = r#"{"test2": "data2"}"#.as_bytes().to_vec();
         let msg_2 = Message {
             message_type: "AnotherMessage".to_owned(),
-            data: data_2.clone(),
+            data: data_2,
         };
         let _ = store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg_1, msg_2]);
 
@@ -336,7 +336,7 @@ mod test {
         let data = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg = Message {
             message_type: "TestMessage".to_owned(),
-            data: data.clone(),
+            data,
         };
         let mut store = MemoryStreamStore::new();
         store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg.clone()]);

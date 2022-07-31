@@ -85,13 +85,17 @@ impl ReadFromStream for MemoryStreamStore {
     ) -> (StreamVersion, Stream) {
         let log = self.log.read().unwrap();
         let index = self.streams.read().unwrap();
-        let log_positions = index.get_positions(stream_name);
+        let meta = self.stream_revisions.read().unwrap();
+        let revision = meta.get(stream_name).map(|n| StreamVersion::Revision(*n)).unwrap_or(StreamVersion::NoStream);
 
-        let mut stream_version = StreamVersion::NoStream;
+        if revision == StreamVersion::NoStream {
+            return (revision, vec![]);
+        }
+
+        let log_positions = index.get_positions(stream_name);
         let mut messages = Vec::with_capacity(log_positions.len() - 1);
         for position in log_positions {
             let message = log.get(*position).unwrap();
-            stream_version = StreamVersion::Revision(message.position.revision);
             messages.push(message.clone());
         }
 
@@ -101,7 +105,7 @@ impl ReadFromStream for MemoryStreamStore {
             messages.into_iter().rev().collect()
         };
 
-        (stream_version, stream)
+        (revision, stream)
     }
 }
 
@@ -182,6 +186,15 @@ mod test {
         Message, ReadDirection, ReadFromCategory, ReadFromStream, StreamVersion, WriteResult,
         WriteToStream,
     };
+
+    #[test]
+    fn it_handles_empty_reads() {
+        let store = MemoryStreamStore::new();
+        let (version, messages) = store.read_from_stream("TestStream-1", ReadDirection::Forwards);
+
+        assert_eq!(version, StreamVersion::NoStream);
+        assert_eq!(messages.len(), 0);
+    }
 
     #[test]
     fn it_reads_events_forwards() {

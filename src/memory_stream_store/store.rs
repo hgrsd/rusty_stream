@@ -9,11 +9,32 @@ use crate::store::{
     StreamMessage, StreamVersion, WriteResult, WriteToStream,
 };
 
+/// An in-memory implementation of a stream store.
+///
+/// The architecture of this in-memory store is as follows:
+///
+/// *  There is a single append-only log that owns all messages in the store (a vector of
+/// StreamMessages). All
+/// writes are made to this log, which is guarded by a read-write lock. This
+/// means that there should be a guaranteed global order between all messages in the store.
+///
+/// * There are two LogPositionIndices, one for streams and one for categories. Querying these
+/// indices will return an array of pointers into the global message log. Under the hood, these
+/// indices are represented by a HashMap with the stream or category name as its keys, and a vector
+/// of usizes as its values. Each usize is an index into the global log.
+///
+/// * There is a HashMap that keeps track of stream revisions for fast lookups, to be used for
+/// detection of version conflits.
+///
+/// * Each write into the store takes out write locks on the global log, the indices, and the map
+/// of stream revisions. This essentially makes this in-memory store a single writer store.
+/// However,
+/// the RwLock does allow for concurrent reads.
 pub struct MemoryStreamStore {
     log: RwLock<Vec<StreamMessage>>,
     streams: RwLock<LogPositionIndex>,
     categories: RwLock<LogPositionIndex>,
-    stream_metadata: RwLock<HashMap<String, usize>>,
+    stream_revisions: RwLock<HashMap<String, usize>>,
 }
 
 impl MemoryStreamStore {
@@ -22,7 +43,7 @@ impl MemoryStreamStore {
             log: RwLock::new(Vec::new()),
             streams: RwLock::new(LogPositionIndex::new()),
             categories: RwLock::new(LogPositionIndex::new()),
-            stream_metadata: RwLock::new(HashMap::new()),
+            stream_revisions: RwLock::new(HashMap::new()),
         }
     }
 
@@ -114,7 +135,7 @@ impl WriteToStream for MemoryStreamStore {
         let mut log = self.log.write().unwrap();
         let mut streams = self.streams.write().unwrap();
         let mut categories = self.categories.write().unwrap();
-        let mut stream_metadata = self.stream_metadata.write().unwrap();
+        let mut stream_metadata = self.stream_revisions.write().unwrap();
 
         let version = stream_metadata
             .get(stream_name)

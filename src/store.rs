@@ -4,7 +4,7 @@ pub struct Message {
     pub data: Vec<u8>,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct MessagePosition {
     pub position: usize,
     pub revision: usize,
@@ -51,7 +51,7 @@ pub trait WriteToStream {
         &mut self,
         stream_name: &str,
         expected_version: StreamVersion,
-        message: Message,
+        messages: &[Message],
     ) -> WriteResult;
 }
 

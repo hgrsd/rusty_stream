@@ -27,10 +27,10 @@ impl MemoryStreamStore {
     }
 
     fn do_write(
-        mut log: RwLockWriteGuard<Vec<StreamMessage>>,
-        mut stream_index: RwLockWriteGuard<LogPositionIndex>,
-        mut category_index: RwLockWriteGuard<LogPositionIndex>,
-        mut stream_metadata: RwLockWriteGuard<HashMap<String, usize>>,
+        log: &mut RwLockWriteGuard<Vec<StreamMessage>>,
+        stream_index: &mut RwLockWriteGuard<LogPositionIndex>,
+        category_index: &mut RwLockWriteGuard<LogPositionIndex>,
+        stream_metadata: &mut RwLockWriteGuard<HashMap<String, usize>>,
         stream_name: &str,
         event: StreamMessage,
     ) -> WriteResult {
@@ -109,12 +109,12 @@ impl WriteToStream for MemoryStreamStore {
         &mut self,
         stream_name: &str,
         expected_version: StreamVersion,
-        message: Message,
+        messages: &[Message],
     ) -> WriteResult {
-        let log = self.log.write().unwrap();
-        let streams = self.streams.write().unwrap();
-        let categories = self.categories.write().unwrap();
-        let stream_metadata = self.stream_metadata.write().unwrap();
+        let mut log = self.log.write().unwrap();
+        let mut streams = self.streams.write().unwrap();
+        let mut categories = self.categories.write().unwrap();
+        let mut stream_metadata = self.stream_metadata.write().unwrap();
 
         let version = stream_metadata
             .get(stream_name)
@@ -125,24 +125,32 @@ impl WriteToStream for MemoryStreamStore {
             return WriteResult::WrongExpectedVersion;
         }
 
-        let new_revision = match version {
+        let next_rev = match version {
             StreamVersion::NoStream => 0,
             StreamVersion::Revision(n) => n + 1,
         };
 
-        let new_position = MessagePosition {
-            revision: new_revision,
+        let mut next_pos = MessagePosition {
+            revision: next_rev,
             position: log.len(),
         };
 
-        let m = StreamMessage {
-            id: Uuid::new_v4().to_string(),
-            message_type: message.message_type,
-            data: message.data,
-            position: new_position,
-        };
+        let mut append_result = WriteResult::Ok(next_pos);
+        for  message in messages {
+            let m = StreamMessage {
+                id: Uuid::new_v4().to_string(),
+                message_type: message.message_type.clone(),
+                data: message.data.clone(),
+                position: next_pos,
+            };
+            append_result = MemoryStreamStore::do_write(&mut log, &mut streams, &mut categories, &mut stream_metadata, stream_name, m);
+            next_pos = MessagePosition {
+                revision: &next_pos.revision + 1,
+                position: &next_pos.position + 1,
+            }
+        }
 
-        MemoryStreamStore::do_write(log, streams, categories, stream_metadata, stream_name, m)
+        append_result
     }
 }
 
@@ -156,19 +164,19 @@ mod test {
 
     #[test]
     fn it_reads_events_forwards() {
-        let data = r#"{"test": "data"}"#.as_bytes().to_vec();
-        let msg = Message {
-            message_type: "TestMessage".to_owned(),
-            data: data.clone(),
-        };
         let mut store = MemoryStreamStore::new();
-        let _ = store.write_to_stream("TestStream-1", StreamVersion::NoStream, msg);
-        let data = r#"{"test2": "data2"}"#.as_bytes().to_vec();
-        let msg = Message {
-            message_type: "AnotherMessage".to_owned(),
-            data: data.clone(),
+        let data_1 = r#"{"test": "data"}"#.as_bytes().to_vec();
+        let msg_1 = Message {
+            message_type: "TestMessage".to_owned(),
+            data: data_1.clone(),
         };
-        let _ = store.write_to_stream("TestStream-1", StreamVersion::Revision(0), msg);
+        let data_2 = r#"{"test2": "data2"}"#.as_bytes().to_vec();
+        let msg_2 = Message {
+            message_type: "AnotherMessage".to_owned(),
+            data: data_2.clone(),
+        };
+
+        let _ = store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg_1, msg_2]);
 
         let (version, messages) = store.read_from_stream("TestStream-1", ReadDirection::Forwards);
 
@@ -180,33 +188,33 @@ mod test {
 
     #[test]
     fn it_reads_a_category() {
-        let data = r#"{"test": "data"}"#.as_bytes().to_vec();
-        let msg = Message {
-            message_type: "TestMessage".to_owned(),
-            data: data.clone(),
-        };
         let mut store = MemoryStreamStore::new();
-        store.write_to_stream("TestStream-1", StreamVersion::NoStream, msg);
 
-        let data = r#"{"test2": "data2"}"#.as_bytes().to_vec();
-        let msg = Message {
-            message_type: "AnotherMessage".to_owned(),
-            data: data.clone(),
+        let data_1 = r#"{"test": "data"}"#.as_bytes().to_vec();
+        let msg_1 = Message {
+            message_type: "TestMessage".to_owned(),
+            data: data_1.clone(),
         };
-        store.write_to_stream("TestStream-1", StreamVersion::Revision(0), msg);
+        let data_2 = r#"{"test2": "data2"}"#.as_bytes().to_vec();
+        let msg_2 = Message {
+            message_type: "AnotherMessage".to_owned(),
+            data: data_2.clone(),
+        };
+
+        store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg_1, msg_2]);
 
         let data = r#"{"test3": "data3"}"#.as_bytes().to_vec();
         let msg = Message {
             message_type: "A third message".to_owned(),
             data: data.clone(),
         };
-        store.write_to_stream("TestStream-2", StreamVersion::NoStream, msg);
+        store.write_to_stream("TestStream-2", StreamVersion::NoStream, &[msg]);
 
         let msg = Message {
             message_type: "A fourth message".to_owned(),
             data: data.clone(),
         };
-        store.write_to_stream("DifferentCategory", StreamVersion::NoStream, msg);
+        store.write_to_stream("DifferentCategory", StreamVersion::NoStream, &[msg]);
 
         let messages = store.read_from_category("TestStream", 0, None);
         assert_eq!(messages.len(), 3);
@@ -217,26 +225,27 @@ mod test {
 
     #[test]
     fn it_reads_a_category_max_messages() {
+        let mut store = MemoryStreamStore::new();
+
         let data = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg = Message {
             message_type: "TestMessage".to_owned(),
             data: data.clone(),
         };
-        let mut store = MemoryStreamStore::new();
-        store.write_to_stream("TestStream-1", StreamVersion::NoStream, msg);
+        store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg]);
 
         let data = r#"{"test3": "data3"}"#.as_bytes().to_vec();
         let msg = Message {
             message_type: "A second message".to_owned(),
             data: data.clone(),
         };
-        store.write_to_stream("TestStream-2", StreamVersion::NoStream, msg);
+        store.write_to_stream("TestStream-2", StreamVersion::NoStream, &[msg]);
 
         let msg = Message {
             message_type: "A third message".to_owned(),
             data: data.clone(),
         };
-        store.write_to_stream("TestStream-1", StreamVersion::Revision(0), msg);
+        store.write_to_stream("TestStream-1", StreamVersion::Revision(0), &[msg]);
 
         let messages = store.read_from_category("TestStream", 0, Some(2));
         assert_eq!(messages.len(), 2);
@@ -246,22 +255,22 @@ mod test {
 
     #[test]
     fn it_reads_a_category_from_offset() {
+        let mut store = MemoryStreamStore::new();
+
         let data = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg = Message {
             message_type: "TestMessage".to_owned(),
             data: data.clone(),
         };
-        let mut store = MemoryStreamStore::new();
-        store.write_to_stream("TestStream-1", StreamVersion::NoStream, msg);
+        store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg]);
 
         let data = r#"{"test3": "data3"}"#.as_bytes().to_vec();
         let msg = Message {
             message_type: "A second message".to_owned(),
             data: data.clone(),
         };
-
         let global_position =
-            match store.write_to_stream("TestStream-2", StreamVersion::NoStream, msg) {
+            match store.write_to_stream("TestStream-2", StreamVersion::NoStream, &[msg]) {
                 WriteResult::Ok(position) => position.position,
                 _ => unreachable!(),
             };
@@ -270,7 +279,7 @@ mod test {
             message_type: "A third message".to_owned(),
             data: data.clone(),
         };
-        store.write_to_stream("TestStream-1", StreamVersion::Revision(0), msg);
+        store.write_to_stream("TestStream-1", StreamVersion::Revision(0), &[msg]);
 
         let messages = store.read_from_category("TestStream", global_position, Some(2));
         assert_eq!(messages.len(), 2);
@@ -280,19 +289,18 @@ mod test {
 
     #[test]
     fn it_reads_events_backwards() {
-        let data = r#"{"test": "data"}"#.as_bytes().to_vec();
-        let msg = Message {
-            message_type: "TestMessage".to_owned(),
-            data: data.clone(),
-        };
         let mut store = MemoryStreamStore::new();
-        let _ = store.write_to_stream("TestStream-1", StreamVersion::NoStream, msg);
-        let data = r#"{"test2": "data2"}"#.as_bytes().to_vec();
-        let msg = Message {
-            message_type: "AnotherMessage".to_owned(),
-            data: data.clone(),
+        let data_1 = r#"{"test": "data"}"#.as_bytes().to_vec();
+        let msg_1 = Message {
+            message_type: "TestMessage".to_owned(),
+            data: data_1.clone(),
         };
-        let _ = store.write_to_stream("TestStream-1", StreamVersion::Revision(0), msg);
+        let data_2 = r#"{"test2": "data2"}"#.as_bytes().to_vec();
+        let msg_2 = Message {
+            message_type: "AnotherMessage".to_owned(),
+            data: data_2.clone(),
+        };
+        let _ = store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg_1, msg_2]);
 
         let (version, messages) = store.read_from_stream("TestStream-1", ReadDirection::Backwards);
 
@@ -310,9 +318,9 @@ mod test {
             data: data.clone(),
         };
         let mut store = MemoryStreamStore::new();
-        store.write_to_stream("TestStream-1", StreamVersion::NoStream, msg.clone());
+        store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg.clone()]);
 
-        let append_result = store.write_to_stream("TestStream-1", StreamVersion::NoStream, msg);
+        let append_result = store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg]);
         assert_eq!(append_result, WriteResult::WrongExpectedVersion);
 
         let (version, messages) = store.read_from_stream("TestStream-1", ReadDirection::Forwards);

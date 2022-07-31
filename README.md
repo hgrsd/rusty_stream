@@ -3,12 +3,13 @@
 A set of traits for reading from and writing to a stream store, together with an in-memory implementation. This project is mostly academic.
 
 [View docs](https://docs.rs/stroming)
+[View crate](https://crates.io/crates/stroming)
 
 # Use
 
 ```toml
 [dependencies]
-stroming = "0.0.4"
+stroming = "0.0.5"
 ```
 
 ```rust

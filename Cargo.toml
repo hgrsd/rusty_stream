@@ -1,11 +1,12 @@
 [package]
 name = "stroming"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 description = "Traits for a stream store, with an in-memory implementation."
 license = "MIT"
 keywords = ["events", "eventsourcing", "streaming", "persistence", "eventstore"]
 exclude = [".github/", ".gitignore"]
+repository = "https://github.com/hgrsd/stroming"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

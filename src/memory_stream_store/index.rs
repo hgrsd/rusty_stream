@@ -36,12 +36,12 @@ impl LogPositionIndex {
         }
     }
 
-    /// Get log positions for a given key after a certain offset. 
+    /// Get log positions for a given key from a certain offset.
     ///
     /// This is a more expensive operation than getting all positions for an index. Its worst case
     /// runtime is O(log n) where n is the total number of positions in the index for the given
     /// key.
-    pub fn get_positions_after(&self, key: &str, offset: usize) -> &[usize] {
+    pub fn get_positions_from(&self, key: &str, offset: usize) -> &[usize] {
         match self.idx.get(key) {
             Some(positions) => {
                 let start = if offset == 0 {

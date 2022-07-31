@@ -9,7 +9,7 @@ A set of traits for reading from and writing to a stream store, together with an
 
 ```toml
 [dependencies]
-stroming = "0.0.5"
+stroming = "0.0.6"
 ```
 
 ```rust

@@ -114,7 +114,7 @@ impl ReadFromCategory for MemoryStreamStore {
     ) -> Stream {
         let log = self.log.read().unwrap();
         let index = self.categories.read().unwrap();
-        let log_positions = index.get_positions_after(category_name, offset);
+        let log_positions = index.get_positions_from(category_name, offset);
         let n = max_messages.unwrap_or(log_positions.len());
         let mut messages = Vec::with_capacity(n);
         for position in log_positions.iter().take(n) {

@@ -107,7 +107,7 @@ pub trait ReadFromCategory {
     /// category will be returned.
     ///
     fn read_from_category(
-        &mut self,
+        &self,
         category_name: &str,
         offset: usize,
         max_messages: Option<usize>,

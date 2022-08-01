@@ -18,6 +18,7 @@ let data = r#"{"test": "data"}"#.as_bytes().to_vec();
 let msg = Message {
     message_type: "TestMessage".to_owned(),
     data,
+    metadata: vec![],
 };
 
 let _ = store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg]);

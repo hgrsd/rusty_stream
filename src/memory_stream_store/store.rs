@@ -166,6 +166,7 @@ impl WriteToStream for MemoryStreamStore {
                 id: Uuid::new_v4().to_string(),
                 message_type: message.message_type.clone(),
                 data: message.data.clone(),
+                metadata: message.metadata.clone(),
                 position: next_pos,
             };
             append_result = MemoryStreamStore::do_write(&mut log, &mut streams, &mut categories, &mut stream_metadata, stream_name, m);
@@ -202,10 +203,12 @@ mod test {
         let data_1 = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg_1 = Message {
             message_type: "TestMessage".to_owned(),
+            metadata: vec![],
             data: data_1,
         };
         let data_2 = r#"{"test2": "data2"}"#.as_bytes().to_vec();
         let msg_2 = Message {
+            metadata: vec![],
             message_type: "AnotherMessage".to_owned(),
             data: data_2,
         };
@@ -226,11 +229,13 @@ mod test {
 
         let data_1 = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg_1 = Message {
+            metadata: vec![],
             message_type: "TestMessage".to_owned(),
             data: data_1,
         };
         let data_2 = r#"{"test2": "data2"}"#.as_bytes().to_vec();
         let msg_2 = Message {
+            metadata: vec![],
             message_type: "AnotherMessage".to_owned(),
             data: data_2,
         };
@@ -239,12 +244,14 @@ mod test {
 
         let data = r#"{"test3": "data3"}"#.as_bytes().to_vec();
         let msg = Message {
+            metadata: vec![],
             message_type: "A third message".to_owned(),
             data: data.clone(),
         };
         store.write_to_stream("TestStream-2", StreamVersion::NoStream, &[msg]);
 
         let msg = Message {
+            metadata: vec![],
             message_type: "A fourth message".to_owned(),
             data: data.clone(),
         };
@@ -263,6 +270,7 @@ mod test {
 
         let data = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg = Message {
+            metadata: vec![],
             message_type: "TestMessage".to_owned(),
             data,
         };
@@ -270,6 +278,7 @@ mod test {
 
         let data = r#"{"test3": "data3"}"#.as_bytes().to_vec();
         let msg = Message {
+            metadata: vec![],
             message_type: "A second message".to_owned(),
             data: data.clone(),
         };
@@ -277,6 +286,7 @@ mod test {
 
         let msg = Message {
             message_type: "A third message".to_owned(),
+            metadata: vec![],
             data,
         };
         store.write_to_stream("TestStream-1", StreamVersion::Revision(0), &[msg]);
@@ -294,6 +304,7 @@ mod test {
         let data = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg = Message {
             message_type: "TestMessage".to_owned(),
+            metadata: vec![],
             data,
         };
         store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg]);
@@ -302,6 +313,7 @@ mod test {
         let msg = Message {
             message_type: "A second message".to_owned(),
             data: data.clone(),
+            metadata: vec![],
         };
         let global_position =
             match store.write_to_stream("TestStream-2", StreamVersion::NoStream, &[msg]) {
@@ -312,6 +324,7 @@ mod test {
         let msg = Message {
             message_type: "A third message".to_owned(),
             data,
+            metadata: vec![],
         };
         store.write_to_stream("TestStream-1", StreamVersion::Revision(0), &[msg]);
 
@@ -328,10 +341,12 @@ mod test {
         let msg_1 = Message {
             message_type: "TestMessage".to_owned(),
             data: data_1,
+            metadata: vec![],
         };
         let data_2 = r#"{"test2": "data2"}"#.as_bytes().to_vec();
         let msg_2 = Message {
             message_type: "AnotherMessage".to_owned(),
+            metadata: vec![],
             data: data_2,
         };
         let _ = store.write_to_stream("TestStream-1", StreamVersion::NoStream, &[msg_1, msg_2]);
@@ -348,6 +363,7 @@ mod test {
     fn it_handles_conflict() {
         let data = r#"{"test": "data"}"#.as_bytes().to_vec();
         let msg = Message {
+            metadata: vec![],
             message_type: "TestMessage".to_owned(),
             data,
         };

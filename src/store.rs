@@ -5,6 +5,8 @@ pub struct Message {
     pub message_type: String,
     /// The data of a message
     pub data: Vec<u8>,
+    /// The metadata of a message
+    pub metadata: Vec<u8>,
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
@@ -24,6 +26,8 @@ pub struct StreamMessage {
     pub message_type: String,
     /// The data of a message.
     pub data: Vec<u8>,
+    /// The metadata of a message.
+    pub metadata: Vec<u8>,
     /// The positions (position and revision) of a message in the store and in its stream.
     pub position: MessagePosition,
 }

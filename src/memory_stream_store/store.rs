@@ -55,7 +55,7 @@ impl MemoryStreamStore {
         stream_name: &str,
         event: StreamMessage,
     ) -> WriteResult {
-        let pos = event.position.clone();
+        let pos = event.position;
         log.push(event);
 
         stream_index.write_position(stream_name, pos.position);
